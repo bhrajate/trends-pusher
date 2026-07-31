@@ -4,6 +4,22 @@ from datetime import datetime, timezone, timedelta
 
 from src.crawler.hackernews import Story
 
+# 得分热度标识
+def _heat_emoji(points: int) -> str:
+    if points >= 500:
+        return "🔥🔥"
+    elif points >= 300:
+        return "🔥"
+    elif points >= 150:
+        return "📈"
+    elif points >= 70:
+        return "📊"
+    else:
+        return "📌"
+
+# 排名奖牌
+_RANK_MEDALS = {1: "🥇", 2: "🥈", 3: "🥉"}
+
 
 def format_hackernews(
     stories: list[Story],
@@ -12,7 +28,7 @@ def format_hackernews(
     """将 Hacker News 文章列表格式化为推送消息
 
     Args:
-        stories: 文章列表
+        stories: 文章列表（按得分降序）
         max_items: 最大显示条数
     """
 
@@ -29,20 +45,33 @@ def format_hackernews(
     ]
 
     for i, story in enumerate(stories, 1):
-        lines.append(f"{i}. [{story.title}]({story.url})")
+        # 排名序号：前三名用奖牌
+        rank = _RANK_MEDALS.get(i, f"{i}.")
 
-        stats_parts = []
+        # 热度标识
+        heat = _heat_emoji(int(story.points)) if story.points else ""
+
+        # 标题行
+        lines.append(f"{rank} {heat} [{story.title}]({story.url})")
+
+        # 统计行
+        stats = []
         if story.points:
-            stats_parts.append(f"⬆ {story.points}")
+            stats.append(f"**{story.points}** points")
+        if story.author:
+            stats.append(f"by {story.author}")
         if story.comments:
-            stats_parts.append(f"💬 {story.comments}")
+            stats.append(f"💬 {story.comments} comments")
+
+        lines.append(f"    {'  ·  '.join(stats)}")
+
+        # 来源 + 评论链接
+        links = []
         if story.source:
-            stats_parts.append(f"🔗 {story.source}")
+            links.append(f"🌐 {story.source}")
+        links.append(f"[HN 讨论]({story.comments_url})")
+        lines.append(f"    {'  |  '.join(links)}")
 
-        if stats_parts:
-            lines.append(f"   {'  |  '.join(stats_parts)}")
-
-        lines.append(f"   [HN 评论]({story.comments_url})")
         lines.append("")
 
     lines.append("━" * 30)
