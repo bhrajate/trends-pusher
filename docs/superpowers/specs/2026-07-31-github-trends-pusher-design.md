@@ -258,6 +258,9 @@ dependencies = [
 [tool.uv]
 index-url = "https://mirrors.aliyun.com/pypi/simple/"
 
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
