@@ -94,7 +94,7 @@ def main():
     args = parser.parse_args()
 
     print("=" * 50)
-    print(f"  GitHub Trends Pusher v0.1.0  [{args.source}]")
+    print(f"  Trends Pusher v0.1.0  [{args.source}]")
     print("=" * 50)
     print()
 

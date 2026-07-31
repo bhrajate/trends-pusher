@@ -72,6 +72,6 @@ def format_trending(
             lines.append("")
 
     lines.append("")
-    lines.append(f"*共 {len(repos)} 个项目 · Powered by GitHub Trends Pusher*")
+    lines.append(f"*共 {len(repos)} 个项目 · Powered by Trends Pusher*")
 
     return "\n".join(lines)

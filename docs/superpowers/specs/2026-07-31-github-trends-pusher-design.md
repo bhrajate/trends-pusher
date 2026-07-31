@@ -1,4 +1,4 @@
-# GitHub Trends Pusher — Design Spec
+# Trends Pusher — Design Spec
 
 **Date:** 2026-07-31
 **Status:** Implemented（已实现，本文反映实际状态）

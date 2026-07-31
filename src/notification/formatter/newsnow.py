@@ -51,6 +51,6 @@ def format_newsnow(
         lines.append("---")
         lines.append("")
 
-    lines.append(f"*共 {len(items)} 条 · Powered by GitHub Trends Pusher*")
+    lines.append(f"*共 {len(items)} 条 · Powered by Trends Pusher*")
 
     return "\n".join(lines)

@@ -1,7 +1,7 @@
 [project]
-name = "github-trends-pusher"
+name = "trends-pusher"
 version = "0.1.0"
-description = "定期拉取 GitHub Trending 并推送到飞书、微信等渠道"
+description = "多源热榜聚合推送：GitHub Trending / Hacker News / 掘金 / Product Hunt / 牛客 → 飞书、微信"
 requires-python = ">=3.12"
 dependencies = [
     "requests>=2.32",

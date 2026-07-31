@@ -60,6 +60,6 @@ def format_hackernews(
             lines.append("")
 
     lines.append("")
-    lines.append(f"*共 {len(stories)} 篇文章 · Powered by GitHub Trends Pusher*")
+    lines.append(f"*共 {len(stories)} 篇文章 · Powered by Trends Pusher*")
 
     return "\n".join(lines)

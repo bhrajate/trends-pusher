@@ -1,4 +1,4 @@
-# GitHub Trends Pusher
+# Trends Pusher
 
 > 多源热榜聚合推送工具，定时抓取 GitHub Trending / Hacker News / 稀土掘金 / Product Hunt / 牛客等平台热门内容，推送到飞书、微信。
 
