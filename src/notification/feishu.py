@@ -62,10 +62,25 @@ class FeishuSender(BaseSender):
             if len(chunks) > 1:
                 chunk = f"({i}/{len(chunks)})\n{chunk}"
 
+            # 提取首行作为卡片标题
+            first_line = chunk.strip().split("\n")[0] if chunk else ""
+            body_content = "\n".join(chunk.strip().split("\n")[1:]).strip()
+
             payload: dict = {
                 "timestamp": str(timestamp),
-                "msg_type": "text",
-                "content": {"text": chunk},
+                "msg_type": "interactive",
+                "card": {
+                    "schema": "2.0",
+                    "header": {
+                        "title": {"tag": "plain_text", "content": first_line},
+                        "template": "wathet",
+                    },
+                    "body": {
+                        "elements": [
+                            {"tag": "markdown", "content": body_content}
+                        ]
+                    },
+                },
             }
             if sign:
                 payload["sign"] = sign
