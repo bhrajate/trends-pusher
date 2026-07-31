@@ -132,13 +132,8 @@ class FeishuSender(BaseSender):
         # 底部说明
         elements.append({"tag": "hr"})
         elements.append({
-            "tag": "note",
-            "elements": [
-                {
-                    "tag": "plain_text",
-                    "content": f"共 {len(repos)} 个项目 · GitHub Trends Pusher",
-                }
-            ],
+            "tag": "markdown",
+            "content": f"*共 {len(repos)} 个项目 · GitHub Trends Pusher*",
         })
 
         return {
