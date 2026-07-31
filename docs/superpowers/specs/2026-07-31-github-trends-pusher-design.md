@@ -7,9 +7,7 @@
 
 ## 1. 项目定位
 
-轻量级 GitHub Trending 定时推送工具。通过 GitHub Actions 定时抓取 GitHub Trending 页面，解析项目列表，推送到飞书、微信（Server酱）等多个 IM 渠道。
-
-**不做什么：** 不聚合其他平台（微博、知乎等），不做 AI 分析，不做 HTML 报告，不做存储。专注一件事 —— 把 GitHub Trending 送到聊天窗口。
+轻量级 GitHub Trending 定时推送工具。通过 GitHub Actions 定时抓取 GitHub Trending 页面，解析项目列表，推送到飞书、微信（Server酱）等 IM 渠道。专注一件事 —— 把 GitHub Trending 送到聊天窗口。
 
 ---
 
