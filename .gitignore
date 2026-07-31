@@ -6,9 +6,6 @@ dist/
 .venv/
 venv/
 
-# uv
-uv.lock
-
 # IDE
 .vscode/
 .idea/
