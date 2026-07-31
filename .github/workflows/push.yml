@@ -1,0 +1,45 @@
+name: Push GitHub Trending
+
+on:
+  schedule:
+    # UTC 01:00 = 北京时间 09:00
+    # fork 后可修改 cron 表达式调整推送时间
+    - cron: "0 1 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: push-${{ github.ref_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          clean: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install dependencies
+        run: uv sync --frozen --no-dev
+
+      - name: Run pusher
+        env:
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+          FEISHU_SECRET: ${{ secrets.FEISHU_SECRET }}
+          WECHAT_SENDKEY: ${{ secrets.WECHAT_SENDKEY }}
+        run: uv run python -m src
