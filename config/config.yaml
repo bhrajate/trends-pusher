@@ -2,6 +2,9 @@
 #   GitHub Trends Pusher 配置文件
 # ═══════════════════════════════════════════════
 
+# 注意：推送频率（cron 表达式）在 .github/workflows/push.yml 中修改
+# GitHub Actions 限制 schedule 的 cron 必须是 YAML 字面量，无法从配置文件读取
+
 # 抓取配置
 crawler:
   since: "daily"           # daily / weekly / monthly
