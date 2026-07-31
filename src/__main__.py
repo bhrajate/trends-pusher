@@ -16,9 +16,11 @@ import yaml
 
 from src.crawler.github import GitHubTrendingCrawler
 from src.crawler.hackernews import HackerNewsCrawler
+from src.crawler.newsnow import NewsNowCrawler
 from src.notification.dispatcher import NotificationDispatcher
 from src.notification.formatter import format_github
 from src.notification.formatter import format_hackernews
+from src.notification.formatter import format_newsnow
 
 
 def _load_config() -> dict:
@@ -80,9 +82,14 @@ def main():
     parser = argparse.ArgumentParser(description="GitHub Trends Pusher")
     parser.add_argument(
         "--source",
-        choices=["github", "hackernews"],
+        choices=["github", "hackernews", "newsnow"],
         default="github",
         help="数据源 (default: github)",
+    )
+    parser.add_argument(
+        "--platform",
+        default="",
+        help="NewsNow 平台 ID (如 zhihu, douyin, juejin, producthunt)",
     )
     args = parser.parse_args()
 
@@ -129,6 +136,22 @@ def main():
 
         content = format_hackernews(
             stories,
+            max_items=display_cfg.get("max_items", 20),
+        )
+
+    elif args.source == "newsnow":
+        if not args.platform:
+            print("[Main] 使用 --source newsnow 时必须指定 --platform (如 zhihu, juejin, producthunt)")
+            sys.exit(1)
+
+        crawler = NewsNowCrawler(platform=args.platform, proxy=proxy)
+        items = crawler.crawl()
+        if not items:
+            print("[Main] 未抓取到任何热榜数据，退出")
+            sys.exit(0)
+
+        content = format_newsnow(
+            items,
             max_items=display_cfg.get("max_items", 20),
         )
 
