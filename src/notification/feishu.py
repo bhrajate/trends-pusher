@@ -36,16 +36,20 @@ class FeishuSender(BaseSender):
         return bool(webhook_url and webhook_url.strip())
 
     def _sign(self) -> tuple[int, str]:
-        """生成飞书签名校验"""
+        """生成飞书签名校验
+
+        飞书签名算法与通常的 HMAC 用法不同：
+        将 "{timestamp}\\n{secret}" 作为 HMAC 的**密钥**，待签消息体为空，
+        最后对摘要做 base64。
+        参考：https://open.feishu.cn/document/client-docs/bot-v3/add-custom-bot
+        """
         timestamp = int(time.time())
         if not self._secret:
             return timestamp, ""
 
         string_to_sign = f"{timestamp}\n{self._secret}"
         hmac_code = hmac.new(
-            self._secret.encode("utf-8"),
-            string_to_sign.encode("utf-8"),
-            digestmod=hashlib.sha256,
+            string_to_sign.encode("utf-8"), digestmod=hashlib.sha256
         ).digest()
         sign = base64.b64encode(hmac_code).decode("utf-8")
         return timestamp, sign
