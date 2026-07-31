@@ -1,13 +1,15 @@
 # GitHub Trends Pusher — Design Spec
 
 **Date:** 2026-07-31
-**Status:** Draft
+**Status:** Implemented（已实现，本文反映实际状态）
 
 ---
 
 ## 1. 项目定位
 
-轻量级 GitHub Trending 定时推送工具。通过 GitHub Actions 定时抓取 GitHub Trending 页面，解析项目列表，推送到飞书、微信（Server酱）等 IM 渠道。专注一件事 —— 把 GitHub Trending 送到聊天窗口。
+轻量级多源热榜聚合推送工具。通过 GitHub Actions 定时抓取 GitHub Trending / Hacker News / 稀土掘金 / Product Hunt / 牛客等多个平台的热门内容，推送到飞书、微信（Server酱）等 IM 渠道。
+
+命令行参数选择数据源：`--source github|hackernews|newsnow`，NewsNow 聚合 API 覆盖 30+ 平台。
 
 ---
 
@@ -17,10 +19,12 @@
 |------|------|
 | 语言 | Python 3.12+ |
 | 包管理 | `uv`（`pyproject.toml` + `uv.lock`） |
-| HTML 解析 | `beautifulsoup4` |
+| HTML 解析 | `beautifulsoup4`（仅 GitHub Trending） |
+| RSS 解析 | 标准库 `re` 解析 XML（Hacker News） |
+| 聚合 API | NewsNow（`newsnow.busiyi.world`，免费无需 Key） |
 | HTTP 请求 | `requests` |
 | 配置 | YAML + 环境变量覆盖 |
-| 调度 | GitHub Actions (`cron` + `workflow_dispatch`) |
+| 调度 | GitHub Actions，每个数据源独立 workflow 文件 |
 | 敏感信息 | GitHub Secrets → 环境变量注入 |
 
 ---
@@ -30,23 +34,36 @@
 ```
 github-trends-pusher/
 ├── .github/workflows/
-│   └── push.yml
+│   ├── push-github.yml
+│   ├── push-hackernews.yml
+│   ├── push-juejin.yml
+│   ├── push-producthunt.yml
+│   └── push-nowcoder.yml
 ├── config/
 │   └── config.yaml
 ├── src/
 │   ├── __init__.py
-│   ├── __main__.py                 # 入口，编排流程
-│   ├── formatter.py                # 数据结构 → 渠道 Markdown
+│   ├── __main__.py                 # --source github|hackernews|newsnow [--platform xxx]
 │   ├── crawler/
-│   │   ├── __init__.py
-│   │   ├── base.py                 # Repo 数据类 + BaseCrawler 抽象
-│   │   └── github_trending.py      # HTML 抓取实现
+│   │   ├── base.py                 # BaseCrawler ABC
+│   │   ├── github/                 # GitHub Trending（HTML 解析）
+│   │   │   ├── models.py          # Repo
+│   │   │   └── crawler.py
+│   │   ├── hackernews/             # Hacker News（RSS）
+│   │   │   ├── models.py          # Story
+│   │   │   └── crawler.py
+│   │   └── newsnow/                # NewsNow 聚合（30+ 平台）
+│   │       ├── models.py          # HotItem
+│   │       └── crawler.py
 │   └── notification/
-│       ├── __init__.py
-│       ├── base.py                 # BaseSender 抽象接口
-│       ├── feishu.py                # 飞书 webhook
-│       ├── wechat.py                # 微信 Server酱 推送
-│       └── dispatcher.py           # 遍历渠道，统一发送
+│       ├── base.py                 # BaseSender ABC
+│       ├── feishu.py               # 飞书（卡片 2.0，自动分批）
+│       ├── wechat.py               # 微信（Server酱）
+│       ├── dispatcher.py           # 遍历渠道，统一发送
+│       └── formatter/              # 按数据源分文件
+│           ├── github.py           # Repo → Markdown
+│           ├── hackernews.py       # Story → Markdown
+│           └── newsnow.py          # HotItem → Markdown
 ├── docs/
 │   └── README-EN.md
 ├── pyproject.toml
@@ -59,185 +76,83 @@ github-trends-pusher/
 
 ## 4. 模块设计
 
-### 4.1 `crawler/base.py` — 爬虫抽象 + 数据模型
+### 4.1 `crawler/base.py` — 爬虫抽象
 
 ```python
-@dataclass
-class Repo:
-    owner: str           # 仓库所有者
-    name: str            # 仓库名
-    description: str     # 项目描述
-    language: str        # 编程语言（可为空）
-    language_color: str  # 语言颜色 hex（可为空）
-    stars: str           # 总 Star 数（格式化字符串，如 "42.3k"）
-    stars_today: str     # 今日新增 Star（格式化字符串）
-    url: str             # 仓库 URL
-
 class BaseCrawler(ABC):
     @abstractmethod
-    def crawl(self) -> list[Repo]: ...
-
+    def crawl(self) -> list[Any]: ...
     @property
     @abstractmethod
     def name(self) -> str: ...
 ```
 
-### 4.2 `crawler/github_trending.py` — GitHub Trending 实现
+各数据源自己定义模型（`Repo` / `Story` / `HotItem`），不强求统一。
 
-- 请求 `https://github.com/trending?since={daily|weekly|monthly}&spoken_language_code={code}`
-- BeautifulSoup 解析 HTML，提取每个 `.Box-row` 元素
-- 解析每个仓库的：owner/name、description、language、stars、stars_today、url
-- 语言颜色从 GitHub 的 `style` 属性中提取（`background-color: #xxx`）
-- 返回 `list[Repo]`
+### 4.2 数据源
 
-### 4.3 `formatter.py` — 消息格式化
+| 数据源 | 方式 | 模块 |
+|--------|------|------|
+| GitHub Trending | HTML 解析 | `crawler/github/` |
+| Hacker News | RSS（hnrss.org） | `crawler/hackernews/` |
+| 稀土掘金 / Product Hunt / 牛客等 | NewsNow API | `crawler/newsnow/` |
 
-- 输入：`list[Repo]`
-- 输出：Markdown 格式的推送消息（字符串）
-- 按渠道可能需要微调（飞书和微信的 Markdown 略有差异），通过 `channel` 参数控制
-- 语言颜色渲染为 Markdown 色块：`🟢 Python`（使用预定义映射）
-- 支持 `max_items` 截断
-- 消息头部包含日期和 `since` 类型
+- NewsNow：`GET https://newsnow.busiyi.world/api/s?id={platform}&latest`，响应 JSON `{status, items: [{title, url, extra: {heat}}]}`
+- 新增平台只需 `--source newsnow --platform {id}`，无需写抓取代码
 
-### 4.4 `notification/base.py` — 通知抽象
+### 4.3 `notification/formatter/` — 消息格式化
 
-```python
-class BaseSender(ABC):
-    @abstractmethod
-    def send(self, content: str) -> bool: ...
+输入数据源模型，输出统一 Markdown 格式：
 
-    @classmethod
-    @abstractmethod
-    def validate_config(cls, config: dict) -> bool: ...
+- `**列表项标题链接**` + 统计行 + `---` 分隔 + 底部斜体水印
+- 飞书 sender 统一包裹为卡片 2.0（`msg_type: interactive`）
+- 格式随数据源不同有差异（GitHub 日期+Dailt、HN 奖牌热度、NewsNow 平台 emoji）
 
-    @property
-    @abstractmethod
-    def channel_name(self) -> str: ...
+### 4.4 通知渠道
+
+| 渠道 | 模块 | 特点 |
+|------|------|------|
+| 飞书 | `feishu.py` | 卡片 2.0，超长自动分批（30KB），HMAC 签名 |
+| 微信 | `wechat.py` | Server酱 HTTP POST，title + desp |
+
+新增渠道：实现 `BaseSender`，在 `dispatcher.py` 中注册。
+
+### 4.5 `__main__.py` — 入口
+
+```bash
+uv run python -m src --source github                       # GitHub Trending
+uv run python -m src --source hackernews                   # Hacker News
+uv run python -m src --source newsnow --platform juejin    # 稀土掘金
+uv run python -m src --source newsnow --platform producthunt
 ```
 
-### 4.5 `notification/wechat.py` — 微信发送器（基于 Server酱）
-
-- 用户注册 [Server酱](https://sct.ftqq.com/) 获得 SendKey
-- 调用 `https://sctapi.ftqq.com/{SendKey}.send` 推送消息到微信
-- 参数：`title`（消息标题）、`desp`（消息内容，支持 Markdown）
-- 简单直接，无需签名校验，无消息长度限制问题
-
-### 4.6 `notification/feishu.py` — 飞书发送器
-
-- 支持飞书自定义机器人 webhook
-- 支持签名校验（`secret` 字段，HMAC-SHA256 + Base64）
-- 消息过长时自动分批（每批不超过 30KB）
-- 消息类型：`interactive`（卡片）或 `text`（Markdown）
-
-### 4.7 `notification/dispatcher.py` — 分发器
-
-- 遍历 `config.yaml` 中 `enabled: true` 的渠道
-- 跳过配置校验失败或 `enabled: false` 的渠道
-- 统计发送成功/失败数量，输出日志
-- 新增渠道只需：实现 `BaseSender` + 在 dispatcher 中注册
-
-### 4.8 `__main__.py` — 入口
-
-流程编排：
-
-1. 加载配置（YAML + 环境变量覆盖）
-2. 根据配置实例化 Crawler
-3. 调用 `crawler.crawl()` 获取 `list[Repo]`
-4. 调用 `formatter.format(repos, channel)` 生成消息
-5. 调用 `dispatcher.dispatch(messages)` 发送到所有渠道
+流程：加载配置 → 按 `--source` 选择 Crawler → `crawl()` → 对应 Formatter → Dispatcher 分发。
 
 ---
 
 ## 5. 配置设计
 
-### 5.1 `config/config.yaml`
+`config/config.yaml`：抓取参数（`since`/`language`）、展示选项（`max_items`/颜色/描述）、通知渠道开关。
 
-```yaml
-crawler:
-  since: "daily"           # daily / weekly / monthly
-  language: ""             # 留空=全部，可选 python/go/javascript/...
-  spoken_language: ""      # 留空=全部，可选 zh/en/...
+环境变量覆盖 YAML：`FEISHU_WEBHOOK_URL`、`WECHAT_SENDKEY` 等。
 
-display:
-  max_items: 25
-  show_language_color: true
-  show_description: true
-
-notification:
-  feishu:
-    enabled: false
-    webhook_url: ""
-    secret: ""
-  wechat:
-    enabled: false
-    sendkey: ""
-```
-
-### 5.2 `.env.example`
-
-```bash
-# ===== 飞书 =====
-FEISHU_ENABLED=false
-FEISHU_WEBHOOK_URL=
-FEISHU_SECRET=
-
-# ===== 微信（Server酱）=====
-WECHAT_ENABLED=false
-WECHAT_SENDKEY=
-
-# ===== 抓取选项 =====
-CRAWLER_SINCE=daily
-CRAWLER_LANGUAGE=
-CRAWLER_SPOKEN_LANGUAGE=
-
-# ===== 展示选项 =====
-DISPLAY_MAX_ITEMS=25
-```
-
-### 5.3 配置优先级
-
-环境变量 > config.yaml。加载顺序：先读 YAML，再用环境变量覆盖对应字段。
-
-### 5.4 GitHub Secrets 映射
-
-| Secret | 环境变量 |
-|--------|---------|
-| `FEISHU_WEBHOOK_URL` | `FEISHU_WEBHOOK_URL` |
-| `FEISHU_SECRET` | `FEISHU_SECRET` |
-| `WECHAT_SENDKEY` | `WECHAT_SENDKEY` |
+GitHub Secrets → workflow env → 程序读取。
 
 ---
 
-## 6. GitHub Actions 工作流
+## 6. GitHub Actions
 
-```yaml
-# .github/workflows/push.yml
-name: Push GitHub Trending
+每个数据源独立 workflow 文件，默认北京时间的上午时段错开推送：
 
-on:
-  schedule:
-    # 默认 UTC 01:00 = 北京时间 09:00
-    # 用户可 fork 后修改 cron 表达式
-    - cron: "0 1 * * *"
-  workflow_dispatch:
+| Workflow | 数据源 | 默认 cron (UTC) | 北京时间 |
+|----------|--------|----------------|---------|
+| `push-github.yml` | GitHub Trending | `3 2 * * *` | 10:03 |
+| `push-hackernews.yml` | Hacker News | `33 2 * * *` | 10:33 |
+| `push-juejin.yml` | 稀土掘金 | `8 2 * * *` | 10:08 |
+| `push-producthunt.yml` | Product Hunt | `13 2 * * *` | 10:13 |
+| `push-nowcoder.yml` | 牛客 | `18 2 * * *` | 10:18 |
 
-jobs:
-  push:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-      - uses: astral-sh/setup-uv@v7
-      - run: uv sync --frozen --no-dev
-      - run: uv run python -m src
-        env:
-          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
-          FEISHU_SECRET: ${{ secrets.FEISHU_SECRET }}
-          WECHAT_SENDKEY: ${{ secrets.WECHAT_SENDKEY }}
-```
+均支持 `workflow_dispatch` 手动触发，共享同一套 Secrets。
 
 ---
 
@@ -247,7 +162,6 @@ jobs:
 [project]
 name = "github-trends-pusher"
 version = "0.1.0"
-description = "定期拉取 GitHub Trending 并推送到飞书、微信等渠道"
 requires-python = ">=3.12"
 dependencies = [
     "requests>=2.32",
@@ -260,61 +174,28 @@ index-url = "https://mirrors.aliyun.com/pypi/simple/"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src"]
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
 ```
 
 ---
 
-## 8. 推送效果预览
-
-```
-🔥 GitHub Trending · 2026-07-31 · Daily
-
-━━━━━━━━━━━━━━━━━━━━━━━━
-
-1. 🟢 cli/cli
-   GitHub's official command line tool
-   ⭐ 42.3k  |  📈 +128 today
-   🔗 https://github.com/cli/cli
-
-2. 🟡 anthropics/claude-code
-   Anthropic's official CLI for Claude
-   ⭐ 18.9k  |  📈 +356 today
-   🔗 https://github.com/anthropics/claude-code
-
-3. ⚪ slimtoolkit/slim
-   Don't change anything in your container image and minify it by up to 30x
-   ⭐ 20.1k  |  📈 +89 today
-   🔗 https://github.com/slimtoolkit/slim
-
-━━━━━━━━━━━━━━━━━━━━━━━━
-共 25 个项目 · Powered by GitHub Trends Pusher
-```
-
----
-
-## 9. 扩展点
+## 8. 扩展点
 
 | 扩展项 | 方式 |
 |--------|------|
-| 新通知渠道 | 实现 `BaseSender`，在 dispatcher 注册 |
-| 新数据源 | 实现 `BaseCrawler`，在 config 中切换 |
-| 更多展示模式 | 扩展 `formatter.py`，通过 config 控制 |
+| 新通知渠道 | 实现 `BaseSender`，在 `dispatcher.py` 注册 |
+| 新独立数据源 | 新建 `crawler/xxx/`（models + crawler）+ `formatter/xxx.py`，在 `__main__.py` 注册 |
+| 新 NewsNow 平台 | 新建 workflow 文件，`--source newsnow --platform {id}` 即用 |
 | Docker 部署 | 后期添加 `Dockerfile` + `docker-compose.yml` |
 
 ---
 
-## 10. 暂不纳入一期
+## 9. 暂不纳入一期
 
 以下功能一期不实现，但不排除后续版本加入：
 
 - AI 分析/翻译
 - HTML 报告/网页展示
 - 数据存储/历史记录
-- RSS 订阅
 - 关键词过滤
 - 调度系统（timeline）
 - 多账号管理
