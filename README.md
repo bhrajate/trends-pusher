@@ -1,14 +1,26 @@
 # GitHub Trends Pusher
 
-> 定时抓取 [GitHub Trending](https://github.com/trending) 热门项目，推送到飞书、微信（Server酱）等 IM 渠道。
+> 多源热榜聚合推送工具，定时抓取 GitHub Trending / Hacker News / 稀土掘金 / Product Hunt / 牛客等平台热门内容，推送到飞书、微信。
+
+## 支持的数据源
+
+| 数据源 | 方式 | 推送时间（北京时间） |
+|--------|------|---------------------|
+| 🔥 GitHub Trending | 直接抓取 | 每天 10:03 |
+| 🔶 Hacker News | RSS | 每天 10:33 |
+| ⛏️ 稀土掘金 | NewsNow API | 每天 10:08 |
+| 🦄 Product Hunt | NewsNow API | 每天 10:13 |
+| 💻 牛客 | NewsNow API | 每天 10:18 |
+
+> NewsNow 聚合 API 支持 30+ 平台，新增平台只需 `--source newsnow --platform {id}`，无需写抓取代码。
 
 ## 功能
 
-- 📊 抓取 GitHub Trending 页面，解析每日/每周/每月热门仓库
-- 📮 推送到**飞书群机器人**、**微信个人号**（通过 Server酱）
-- ⏰ 通过 GitHub Actions 定时运行，默认北京时间每天 9:00
-- 🎨 语言颜色 emoji 标识，项目描述、Star 数一目了然
-- 🔌 可扩展架构：新增通知渠道或数据源只需实现相应接口
+- 📊 多数据源：GitHub Trending（HTML 解析）、Hacker News（RSS）、NewsNow 聚合（知乎/抖音/微博等 30+ 平台）
+- 📮 多渠道推送：**飞书群机器人**（卡片 2.0）+ **微信个人号**（Server酱）
+- ⏰ GitHub Actions 定时运行，每个数据源独立 workflow，cron 自由配置
+- 🎨 飞书富文本卡片，Markdown 分隔线布局，语言颜色/奖牌/热度标识
+- 🔌 可扩展：加数据源 = 加 `crawler/xxx/` + `formatter/xxx.py`，加渠道 = 实现 `BaseSender`
 
 ## 快速开始
 
@@ -30,19 +42,13 @@
 2. 在 GitHub Secrets 中添加：
    - `WECHAT_SENDKEY`：你的 SendKey
 
-### 3. （可选）调整推送频率
+### 3. 启用/禁用数据源
 
-编辑 `.github/workflows/push.yml`，修改 `cron` 表达式：
+在 GitHub Actions 页面，每个数据源有独立的 workflow，可以手动 enable/disable。
 
-```yaml
-on:
-  schedule:
-    - cron: "0 1 * * *"   # UTC 01:00 = 北京时间 09:00
-```
+### 4. 调整推送时间
 
-### 4. 手动触发测试
-
-在 GitHub Actions 页面选择 `Push GitHub Trending` → `Run workflow`，立即执行一次。
+编辑对应 workflow 文件的 `cron` 表达式（UTC 时间，北京时间 = UTC + 8）。
 
 ## 本地运行
 
@@ -50,60 +56,73 @@ on:
 # 安装依赖
 uv sync
 
-# 运行（需通过代理访问 GitHub）
+# GitHub Trending
+uv run python -m src --source github
+
+# Hacker News
+uv run python -m src --source hackernews
+
+# NewsNow 平台（如掘金、Product Hunt 等）
+uv run python -m src --source newsnow --platform juejin
+uv run python -m src --source newsnow --platform producthunt
+
+# 需要代理时
 export http_proxy=http://127.0.0.1:7897
 export https_proxy=http://127.0.0.1:7897
 
-# 配置环境变量
+# 配置飞书/微信后可直接推送
 export FEISHU_WEBHOOK_URL=https://open.feishu.cn/open-apis/bot/v2/hook/xxx
 export WECHAT_SENDKEY=SCTxxxxx
-
-uv run python -m src
 ```
 
 ## 配置说明
 
-编辑 `config/config.yaml` 或通过环境变量覆盖：
+`config/config.yaml`：
 
 | 配置项 | 默认值 | 说明 |
 |--------|--------|------|
-| `crawler.since` | `daily` | 榜单类型：`daily` / `weekly` / `monthly` |
+| `crawler.since` | `daily` | GitHub 榜单类型：`daily` / `weekly` / `monthly` |
 | `crawler.language` | `""` | 编程语言过滤，如 `python` |
-| `crawler.spoken_language` | `""` | 自然语言过滤，如 `zh` |
-| `display.max_items` | `25` | 最大展示项目数 |
+| `display.max_items` | `25` | 最大展示条数 |
 | `display.show_language_color` | `true` | 是否显示语言 emoji |
 | `display.show_description` | `true` | 是否显示项目描述 |
 
 ## 项目结构
 
 ```
-github-trends-pusher/
-├── .github/workflows/push.yml   # GitHub Actions 工作流
-├── config/config.yaml            # 配置文件
-├── src/
-│   ├── __main__.py               # 入口
-│   ├── formatter.py              # 消息格式化
-│   ├── crawler/                  # 数据源
-│   │   ├── base.py               # 抽象接口
-│   │   └── github_trending.py    # GitHub Trending 抓取
-│   └── notification/             # 通知渠道
-│       ├── base.py               # 抽象接口
-│       ├── feishu.py             # 飞书
-│       ├── wechat.py             # 微信
-│       └── dispatcher.py         # 分发器
-├── docs/README-EN.md             # English docs
-└── .env.example                  # 环境变量模板
+src/
+├── __main__.py                    # --source github|hackernews|newsnow
+├── crawler/
+│   ├── base.py                    # BaseCrawler ABC
+│   ├── github/                    # GitHub Trending（HTML 解析）
+│   │   ├── models.py             # Repo
+│   │   └── crawler.py
+│   ├── hackernews/                # Hacker News（RSS）
+│   │   ├── models.py             # Story
+│   │   └── crawler.py
+│   └── newsnow/                   # NewsNow 聚合（30+ 平台）
+│       ├── models.py             # HotItem
+│       └── crawler.py
+└── notification/
+    ├── base.py                    # BaseSender ABC
+    ├── feishu.py                  # 飞书（卡片 2.0）
+    ├── wechat.py                  # 微信（Server酱）
+    ├── dispatcher.py              # 分发器
+    └── formatter/
+        ├── github.py              # Repo → Markdown
+        ├── hackernews.py          # Story → Markdown
+        └── newsnow.py             # HotItem → Markdown
 ```
 
 ## 扩展
 
 - **新通知渠道**：实现 `BaseSender`，在 `dispatcher.py` 中注册
-- **新数据源**：实现 `BaseCrawler`，在 config 中切换
-- **Docker 部署**：后续支持
+- **新数据源**：实现 `BaseCrawler` + models + formatter，在 `__main__.py` 中注册
+- **新 NewsNow 平台**：只需新建 workflow 文件，`--source newsnow --platform {id}` 即用
 
 ## 参考
 
-本项目设计参考了 [TrendRadar](https://github.com/sansan0/TrendRadar)。
+设计参考了 [TrendRadar](https://github.com/sansan0/TrendRadar)，数据聚合基于 [NewsNow](https://github.com/ourongxing/newsnow)。
 
 ## License
 
