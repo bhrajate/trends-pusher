@@ -29,7 +29,7 @@ def format_hackernews(
     date_str = bj_now.strftime("%Y-%m-%d")
 
     lines = [
-        f"🔶 Hacker News · {date_str} · Daily",
+        f"🔶 Hacker News · {date_str} · Daily",  # HN frontpage 始终是当前最热，固定 Daily
         "",
     ]
 
