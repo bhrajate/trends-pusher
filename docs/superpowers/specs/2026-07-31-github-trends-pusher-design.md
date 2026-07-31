@@ -7,7 +7,7 @@
 
 ## 1. 项目定位
 
-轻量级 GitHub Trending 定时推送工具。通过 GitHub Actions 定时抓取 GitHub Trending 页面，解析项目列表，推送到飞书、钉钉等多个 IM 渠道。
+轻量级 GitHub Trending 定时推送工具。通过 GitHub Actions 定时抓取 GitHub Trending 页面，解析项目列表，推送到微信（Server酱）、钉钉等多个 IM 渠道。
 
 **不做什么：** 不聚合其他平台（微博、知乎等），不做 AI 分析，不做 HTML 报告，不做存储。专注一件事 —— 把 GitHub Trending 送到聊天窗口。
 
@@ -46,7 +46,7 @@ github-trends-pusher/
 │   └── notification/
 │       ├── __init__.py
 │       ├── base.py                 # BaseSender 抽象接口
-│       ├── feishu.py               # 飞书 webhook
+│       ├── wechat.py                # 微信 Server酱 推送
 │       ├── dingtalk.py             # 钉钉 webhook
 │       └── dispatcher.py           # 遍历渠道，统一发送
 ├── docs/
@@ -96,7 +96,7 @@ class BaseCrawler(ABC):
 
 - 输入：`list[Repo]`
 - 输出：Markdown 格式的推送消息（字符串）
-- 按渠道可能需要微调（飞书和钉钉的 Markdown 略有差异），通过 `channel` 参数控制
+- 按渠道可能需要微调（微信和钉钉的 Markdown 略有差异），通过 `channel` 参数控制
 - 语言颜色渲染为 Markdown 色块：`🟢 Python`（使用预定义映射）或钉钉兼容格式
 - 支持 `max_items` 截断
 - 消息头部包含日期和 `since` 类型
@@ -117,12 +117,12 @@ class BaseSender(ABC):
     def channel_name(self) -> str: ...
 ```
 
-### 4.5 `notification/feishu.py` — 飞书发送器
+### 4.5 `notification/wechat.py` — 微信发送器（基于 Server酱）
 
-- 支持飞书自定义机器人 webhook
-- 支持签名校验（`secret` 字段，HMAC-SHA256 + Base64）
-- 消息过长时自动分批（每批不超过 30KB）
-- 消息类型：`interactive`（卡片）或 `text`（Markdown）
+- 用户注册 [Server酱](https://sct.ftqq.com/) 获得 SendKey
+- 调用 `https://sctapi.ftqq.com/{SendKey}.send` 推送消息到微信
+- 参数：`title`（消息标题）、`desp`（消息内容，支持 Markdown）
+- 简单直接，无需签名校验，无消息长度限制问题
 
 ### 4.6 `notification/dingtalk.py` — 钉钉发送器
 
@@ -166,10 +166,9 @@ display:
   show_description: true
 
 notification:
-  feishu:
+  wechat:
     enabled: false
-    webhook_url: ""
-    secret: ""
+    sendkey: ""
   dingtalk:
     enabled: false
     webhook_url: ""
@@ -179,10 +178,9 @@ notification:
 ### 5.2 `.env.example`
 
 ```bash
-# ===== 飞书 =====
-FEISHU_ENABLED=false
-FEISHU_WEBHOOK_URL=
-FEISHU_SECRET=
+# ===== 微信（Server酱）=====
+WECHAT_ENABLED=false
+WECHAT_SENDKEY=
 
 # ===== 钉钉 =====
 DINGTALK_ENABLED=false
@@ -206,8 +204,7 @@ DISPLAY_MAX_ITEMS=25
 
 | Secret | 环境变量 |
 |--------|---------|
-| `FEISHU_WEBHOOK_URL` | `FEISHU_WEBHOOK_URL` |
-| `FEISHU_SECRET` | `FEISHU_SECRET` |
+| `WECHAT_SENDKEY` | `WECHAT_SENDKEY` |
 | `DINGTALK_WEBHOOK_URL` | `DINGTALK_WEBHOOK_URL` |
 | `DINGTALK_SECRET` | `DINGTALK_SECRET` |
 
@@ -239,8 +236,7 @@ jobs:
       - run: uv sync --frozen --no-dev
       - run: uv run python -m src
         env:
-          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
-          FEISHU_SECRET: ${{ secrets.FEISHU_SECRET }}
+          WECHAT_SENDKEY: ${{ secrets.WECHAT_SENDKEY }}
           DINGTALK_WEBHOOK_URL: ${{ secrets.DINGTALK_WEBHOOK_URL }}
           DINGTALK_SECRET: ${{ secrets.DINGTALK_SECRET }}
 ```
@@ -253,7 +249,7 @@ jobs:
 [project]
 name = "github-trends-pusher"
 version = "0.1.0"
-description = "定期拉取 GitHub Trending 并推送到飞书、钉钉等渠道"
+description = "定期拉取 GitHub Trending 并推送到微信、钉钉等渠道"
 requires-python = ">=3.12"
 dependencies = [
     "requests>=2.32",
