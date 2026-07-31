@@ -255,6 +255,9 @@ dependencies = [
     "pyyaml>=6.0",
 ]
 
+[tool.uv]
+index-url = "https://mirrors.aliyun.com/pypi/simple/"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
