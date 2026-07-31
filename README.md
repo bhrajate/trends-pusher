@@ -4,13 +4,13 @@
 
 ## 支持的数据源
 
-| 数据源 | 方式 | 默认频率 |
-|--------|------|---------|
-| 🔥 GitHub Trending | 直接抓取 | 每天 |
-| 🔶 Hacker News | RSS | 每天 |
-| ⛏️ 稀土掘金 | NewsNow API | 每天 |
-| 🦄 Product Hunt | NewsNow API | 每天 |
-| 💻 牛客 | NewsNow API | 每天 |
+| 数据源 | 方式 | 默认推送时间 |
+|--------|------|-------------|
+| 🔥 GitHub Trending | 直接抓取 | 每天 10:03 |
+| 🔶 Hacker News | RSS | 每天 10:33 |
+| ⛏️ 稀土掘金 | NewsNow API | 每天 10:08 |
+| 🦄 Product Hunt | NewsNow API | 每天 10:13 |
+| 💻 牛客 | NewsNow API | 每天 10:18 |
 
 > NewsNow 聚合 API 支持 30+ 平台，新增平台只需 `--source newsnow --platform {id}`，无需写抓取代码。
 

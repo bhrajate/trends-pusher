@@ -4,13 +4,13 @@
 
 ## Supported Sources
 
-| Source | Method | Default |
-|--------|--------|---------|
-| 🔥 GitHub Trending | Direct scraping | Daily |
-| 🔶 Hacker News | RSS | Daily |
-| ⛏️ Juejin | NewsNow API | Daily |
-| 🦄 Product Hunt | NewsNow API | Daily |
-| 💻 Nowcoder | NewsNow API | Daily |
+| Source | Method | Default Schedule |
+|--------|--------|-----------------|
+| 🔥 GitHub Trending | Direct scraping | Daily 10:03 |
+| 🔶 Hacker News | RSS | Daily 10:33 |
+| ⛏️ Juejin | NewsNow API | Daily 10:08 |
+| 🦄 Product Hunt | NewsNow API | Daily 10:13 |
+| 💻 Nowcoder | NewsNow API | Daily 10:18 |
 
 > The NewsNow API supports 30+ platforms. Adding a new platform is just `--source newsnow --platform {id}`.
 
