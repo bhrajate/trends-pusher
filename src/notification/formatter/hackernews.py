@@ -29,7 +29,7 @@ def format_hackernews(
     date_str = bj_now.strftime("%Y-%m-%d")
 
     lines = [
-        f"🔶 Hacker News Frontpage · {date_str}",
+        f"🔶 Hacker News · {date_str} · Daily",
         "",
     ]
 
