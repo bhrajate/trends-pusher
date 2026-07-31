@@ -26,7 +26,7 @@ def format_hackernews(
     stories = stories[:max_items]
 
     bj_now = datetime.now(timezone.utc) + timedelta(hours=8)
-    date_str = bj_now.strftime("%Y-%m-%d %H:%M")
+    date_str = bj_now.strftime("%Y-%m-%d")
 
     lines = [
         f"🔶 Hacker News Frontpage · {date_str}",
