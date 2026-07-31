@@ -1,6 +1,6 @@
 """GitHub Trends Pusher — 入口
 
-流程: 加载配置 → 抓取 Trending → 格式化消息 → 分发到各渠道
+流程: 加载配置 → 抓取 Trending → 分发到各渠道（格式化由各 sender 负责）
 """
 
 import os
@@ -11,7 +11,6 @@ from typing import Optional
 import yaml
 
 from src.crawler.github_trending import GitHubTrendingCrawler
-from src.formatter import format_trending
 from src.notification.dispatcher import NotificationDispatcher
 
 
@@ -111,25 +110,19 @@ def main():
         print("[Main] 未抓取到任何仓库，退出")
         sys.exit(0)
 
-    # 3. 格式化
-    print()
-    content = format_trending(
-        repos,
-        max_items=display_cfg.get("max_items", 25),
-        show_language_color=display_cfg.get("show_language_color", True),
-        show_description=display_cfg.get("show_description", True),
-        since=crawler_cfg.get("since", "daily"),
-    )
-
-    # 4. 发送
+    # 3. 发送（格式化由各 sender 内部负责）
     print()
     dispatcher = NotificationDispatcher(
         config={"notification": notification_cfg},
         proxy=proxy,
     )
-    results = dispatcher.dispatch(content)
+    results = dispatcher.dispatch(
+        repos=repos,
+        display_cfg=display_cfg,
+        since=crawler_cfg.get("since", "daily"),
+    )
 
-    # 5. 汇总
+    # 4. 汇总
     print()
     if results:
         success = sum(1 for v in results.values() if v)

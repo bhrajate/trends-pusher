@@ -1,6 +1,8 @@
 """通知分发器 — 遍历已配置渠道统一发送"""
 
-from typing import Optional
+from typing import Any, Optional
+
+from src.crawler.base import Repo
 
 from .base import BaseSender
 from .feishu import FeishuSender
@@ -60,11 +62,18 @@ class NotificationDispatcher:
             else:
                 print(f"[Dispatcher] 微信配置不完整，跳过")
 
-    def dispatch(self, content: str) -> dict[str, bool]:
+    def dispatch(
+        self,
+        repos: list[Repo],
+        display_cfg: dict[str, Any],
+        since: str = "daily",
+    ) -> dict[str, bool]:
         """向所有已配置渠道发送消息
 
         Args:
-            content: 格式化后的 Markdown 消息
+            repos: 仓库列表
+            display_cfg: 展示配置
+            since: 榜单类型
 
         Returns:
             {channel_name: success} 字典
@@ -76,7 +85,7 @@ class NotificationDispatcher:
         results = {}
         for sender in self._senders:
             print(f"[Dispatcher] 正在发送到 {sender.channel_name}...")
-            success = sender.send(content)
+            success = sender.send(repos, display_cfg, since)
             results[sender.channel_name] = success
 
         # 汇总

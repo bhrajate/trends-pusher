@@ -57,7 +57,7 @@ def _language_emoji(language: str) -> str:
 
 def format_trending(
     repos: list[Repo],
-    channel: str = "default",
+    channel: str,
     max_items: int = 25,
     show_language_color: bool = True,
     show_description: bool = True,
