@@ -1,5 +1,7 @@
 # Trends Pusher
 
+[中文](../README.md)
+
 > Multi-source trending aggregator. Periodically fetches hot content from GitHub Trending, Hacker News, Juejin, Product Hunt, Nowcoder and more, pushing to Feishu and WeChat.
 
 ## Supported Sources
