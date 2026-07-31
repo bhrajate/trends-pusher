@@ -1,8 +1,12 @@
 """GitHub Trends Pusher — 入口
 
-流程: 加载配置 → 抓取 Trending → 分发到各渠道（格式化由各 sender 负责）
+用法:
+  uv run python -m src                        # 默认 GitHub Trending
+  uv run python -m src --source github         # GitHub Trending
+  uv run python -m src --source hackernews     # Hacker News
 """
 
+import argparse
 import os
 import sys
 from pathlib import Path
@@ -10,8 +14,11 @@ from typing import Optional
 
 import yaml
 
-from src.crawler.github_trending import GitHubTrendingCrawler
+from src.crawler.github import GitHubTrendingCrawler
+from src.crawler.hackernews import HackerNewsCrawler
 from src.notification.dispatcher import NotificationDispatcher
+from src.notification.formatter import format_github
+from src.notification.formatter import format_hackernews
 
 
 def _load_config() -> dict:
@@ -26,27 +33,21 @@ def _load_config() -> dict:
         config = yaml.safe_load(f)
     print(f"[Config] 已加载: {config_path}")
 
-    # 环境变量覆盖
     _override_from_env(config)
-
     return config
 
 
 def _override_from_env(config: dict) -> None:
     """用环境变量覆盖配置值"""
     env_map = {
-        # 飞书
         "FEISHU_ENABLED": ("notification", "feishu", "enabled"),
         "FEISHU_WEBHOOK_URL": ("notification", "feishu", "webhook_url"),
         "FEISHU_SECRET": ("notification", "feishu", "secret"),
-        # 微信
         "WECHAT_ENABLED": ("notification", "wechat", "enabled"),
         "WECHAT_SENDKEY": ("notification", "wechat", "sendkey"),
-        # 抓取
         "CRAWLER_SINCE": ("crawler", "since"),
         "CRAWLER_LANGUAGE": ("crawler", "language"),
         "CRAWLER_SPOKEN_LANGUAGE": ("crawler", "spoken_language"),
-        # 展示
         "DISPLAY_MAX_ITEMS": ("display", "max_items"),
     }
 
@@ -54,12 +55,8 @@ def _override_from_env(config: dict) -> None:
         value = os.environ.get(env_var, "").strip()
         if not value:
             continue
-
-        # 布尔值转换
         if env_var.endswith("_ENABLED"):
             value = value.lower() in ("true", "1", "yes")
-
-        # 设置到配置树
         section = config
         for key in path[:-1]:
             if key not in section:
@@ -73,8 +70,6 @@ def _get_proxy() -> Optional[str]:
     is_github_actions = os.environ.get("GITHUB_ACTIONS") == "true"
     if is_github_actions:
         return None
-
-    # 本地环境检查代理
     proxy = os.environ.get("HTTP_PROXY") or os.environ.get("http_proxy")
     if proxy:
         print(f"[Config] 使用代理: {proxy}")
@@ -82,45 +77,72 @@ def _get_proxy() -> Optional[str]:
 
 
 def main():
-    """主流程"""
+    parser = argparse.ArgumentParser(description="GitHub Trends Pusher")
+    parser.add_argument(
+        "--source",
+        choices=["github", "hackernews"],
+        default="github",
+        help="数据源 (default: github)",
+    )
+    args = parser.parse_args()
+
     print("=" * 50)
-    print("  GitHub Trends Pusher v0.1.0")
+    print(f"  GitHub Trends Pusher v0.1.0  [{args.source}]")
     print("=" * 50)
     print()
 
-    # 1. 加载配置
+    # 1. 配置
     config = _load_config()
     proxy = _get_proxy()
-
-    crawler_cfg = config.get("crawler", {})
     display_cfg = config.get("display", {})
     notification_cfg = config.get("notification", {})
 
-    # 2. 抓取
+    # 2. 抓取 + 格式化（按数据源分发）
     print()
-    crawler = GitHubTrendingCrawler(
-        since=crawler_cfg.get("since", "daily"),
-        language=crawler_cfg.get("language", ""),
-        spoken_language=crawler_cfg.get("spoken_language", ""),
-        proxy=proxy,
-    )
-    repos = crawler.crawl()
+    if args.source == "github":
+        crawler_cfg = config.get("crawler", {})
+        crawler = GitHubTrendingCrawler(
+            since=crawler_cfg.get("since", "daily"),
+            language=crawler_cfg.get("language", ""),
+            spoken_language=crawler_cfg.get("spoken_language", ""),
+            proxy=proxy,
+        )
+        repos = crawler.crawl()
+        if not repos:
+            print("[Main] 未抓取到任何仓库，退出")
+            sys.exit(0)
 
-    if not repos:
-        print("[Main] 未抓取到任何仓库，退出")
-        sys.exit(0)
+        content = format_github(
+            repos,
+            max_items=display_cfg.get("max_items", 25),
+            show_language_color=display_cfg.get("show_language_color", True),
+            show_description=display_cfg.get("show_description", True),
+            since=crawler_cfg.get("since", "daily"),
+        )
 
-    # 3. 发送（格式化由各 sender 内部负责）
+    elif args.source == "hackernews":
+        crawler = HackerNewsCrawler(proxy=proxy)
+        stories = crawler.crawl()
+        if not stories:
+            print("[Main] 未抓取到任何文章，退出")
+            sys.exit(0)
+
+        content = format_hackernews(
+            stories,
+            max_items=display_cfg.get("max_items", 20),
+        )
+
+    else:
+        print(f"[Main] 未知数据源: {args.source}")
+        sys.exit(1)
+
+    # 3. 分发
     print()
     dispatcher = NotificationDispatcher(
         config={"notification": notification_cfg},
         proxy=proxy,
     )
-    results = dispatcher.dispatch(
-        repos=repos,
-        display_cfg=display_cfg,
-        since=crawler_cfg.get("since", "daily"),
-    )
+    results = dispatcher.dispatch(content)
 
     # 4. 汇总
     print()

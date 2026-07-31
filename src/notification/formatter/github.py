@@ -1,9 +1,8 @@
-"""消息格式化模块 — 将 Repo 列表渲染为渠道 Markdown 消息"""
+"""GitHub Trending → 渠道 Markdown"""
 
 from datetime import datetime, timezone, timedelta
-from typing import Optional
 
-from src.crawler.base import Repo
+from src.crawler.github import Repo
 
 # 语言 → emoji 颜色映射
 LANGUAGE_COLORS: dict[str, str] = {
@@ -57,7 +56,6 @@ def _language_emoji(language: str) -> str:
 
 def format_trending(
     repos: list[Repo],
-    channel: str,
     max_items: int = 25,
     show_language_color: bool = True,
     show_description: bool = True,

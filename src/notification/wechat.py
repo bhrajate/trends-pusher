@@ -1,13 +1,10 @@
 """微信推送发送器（基于 Server酱）"""
 
-from typing import Any, Optional
+from typing import Optional
 
 import requests
 
-from src.crawler.base import Repo
-
 from .base import BaseSender
-from .formatter import format_trending
 
 SERVERCHAN_URL = "https://sctapi.ftqq.com"
 
@@ -28,25 +25,11 @@ class WeChatSender(BaseSender):
         sendkey = config.get("sendkey", "")
         return bool(sendkey and sendkey.strip())
 
-    def send(
-        self,
-        repos: list[Repo],
-        display_cfg: dict[str, Any],
-        since: str = "daily",
-    ) -> bool:
+    def send(self, content: str) -> bool:
         """发送消息到微信"""
-        content = format_trending(
-            repos,
-            channel="wechat",
-            max_items=display_cfg.get("max_items", 25),
-            show_language_color=display_cfg.get("show_language_color", True),
-            show_description=display_cfg.get("show_description", True),
-            since=since,
-        )
-
         url = f"{SERVERCHAN_URL}/{self._sendkey}.send"
         lines = content.strip().split("\n")
-        title = lines[0].lstrip("#").strip() if lines else "GitHub Trending"
+        title = lines[0].lstrip("#").strip() if lines else "推送消息"
 
         payload = {"title": title, "desp": content}
 

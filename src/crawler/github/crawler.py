@@ -6,7 +6,8 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from .base import BaseCrawler, Repo
+from src.crawler.base import BaseCrawler
+from .models import Repo
 
 GITHUB_TRENDING_URL = "https://github.com/trending"
 
