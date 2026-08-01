@@ -2,8 +2,8 @@ name: Push Product Hunt
 
 on:
   schedule:
-    # UTC 02:13 = 北京时间 10:13
-    - cron: "13 2 * * *"
+    # UTC 08:00 = 北京时间 16:00
+    - cron: "0 8 * * *"
   workflow_dispatch:
 
 concurrency:

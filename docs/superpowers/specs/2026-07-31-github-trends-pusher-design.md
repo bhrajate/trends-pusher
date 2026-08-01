@@ -142,15 +142,15 @@ GitHub Secrets → workflow env → 程序读取。
 
 ## 6. GitHub Actions
 
-每个数据源独立 workflow 文件，默认北京时间的上午时段错开推送：
-
+每个数据源独立 workflow 文件，按内容特征全天错开推送（详见 [推送时间设计](../../push-schedule-design.md)）：
+	
 | Workflow | 数据源 | 默认 cron (UTC) | 北京时间 |
 |----------|--------|----------------|---------|
-| `push-github.yml` | GitHub Trending | `3 2 * * *` | 10:03 |
-| `push-juejin.yml` | 稀土掘金 | `8 2 * * *` | 10:08 |
-| `push-producthunt.yml` | Product Hunt | `13 2 * * *` | 10:13 |
-| `push-nowcoder.yml` | 牛客 | `18 2 * * *` | 10:18 |
-| `push-hackernews.yml` | Hacker News | `33 2 * * *` | 10:33 |
+| `push-github.yml` | GitHub Trending | `0 1 * * *` | 09:00 |
+| `push-juejin.yml` | 稀土掘金 | `0 4 * * *` | 12:00 |
+| `push-nowcoder.yml` | 牛客 | `0 6 * * *` | 14:00 |
+| `push-producthunt.yml` | Product Hunt | `0 8 * * *` | 16:00 |
+| `push-hackernews.yml` | Hacker News | `0 10 * * *` | 18:00 |
 
 均支持 `workflow_dispatch` 手动触发，共享同一套 Secrets。
 

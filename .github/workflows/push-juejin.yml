@@ -2,8 +2,8 @@ name: Push 稀土掘金
 
 on:
   schedule:
-    # UTC 02:08 = 北京时间 10:08
-    - cron: "8 2 * * *"
+    # UTC 04:00 = 北京时间 12:00
+    - cron: "0 4 * * *"
   workflow_dispatch:
 
 concurrency:

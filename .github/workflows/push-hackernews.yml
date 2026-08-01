@@ -2,8 +2,8 @@ name: Push Hacker News
 
 on:
   schedule:
-    # UTC 02:33 = 北京时间 10:33（每天一次）
-    - cron: "33 2 * * *"
+    # UTC 10:00 = 北京时间 18:00（每天一次）
+    - cron: "0 10 * * *"
   workflow_dispatch:
 
 concurrency:
