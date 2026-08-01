@@ -25,7 +25,7 @@ _PLATFORM_EMOJI: dict[str, str] = {
 
 def format_newsnow(
     items: list[HotItem],
-    max_items: int = 20,
+    max_items: int = 25,
 ) -> str:
     items = items[:max_items]
 

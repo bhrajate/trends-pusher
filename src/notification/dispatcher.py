@@ -22,11 +22,9 @@ class NotificationDispatcher:
         if not channels:
             return
 
-        # 飞书
+        # 飞书（webhook_url 有值即启用）
         feishu_cfg = channels.get("feishu", {})
-        if feishu_cfg.get("enabled", False) or (
-            "webhook_url" in feishu_cfg and feishu_cfg["webhook_url"]
-        ):
+        if feishu_cfg.get("webhook_url", "").strip():
             if FeishuSender.validate_config(feishu_cfg):
                 self._senders.append(
                     FeishuSender(
@@ -39,11 +37,9 @@ class NotificationDispatcher:
             else:
                 print(f"[Dispatcher] 飞书配置不完整，跳过")
 
-        # 微信（Server酱）
+        # 微信（Server酱）（sendkey 有值即启用）
         wechat_cfg = channels.get("wechat", {})
-        if wechat_cfg.get("enabled", False) or (
-            "sendkey" in wechat_cfg and wechat_cfg["sendkey"]
-        ):
+        if wechat_cfg.get("sendkey", "").strip():
             if WeChatSender.validate_config(wechat_cfg):
                 self._senders.append(
                     WeChatSender(sendkey=wechat_cfg["sendkey"], proxy=self._proxy)

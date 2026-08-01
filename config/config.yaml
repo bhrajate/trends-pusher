@@ -7,9 +7,10 @@
 
 # 抓取配置
 crawler:
-  since: "daily"           # daily / weekly / monthly
-  language: ""             # 留空=全部语言，可选 python/go/javascript/...
-  spoken_language: ""      # 留空=全部，可选 zh/en/...
+  github:
+    since: "daily"           # daily / weekly / monthly
+    language: ""             # 留空=全部语言，可选 python/go/javascript/...
+    spoken_language: ""      # 留空=全部，可选 zh/en/...
 
 # 展示配置
 display:
@@ -17,12 +18,10 @@ display:
   show_language_color: true
   show_description: true
 
-# 通知渠道
+# 通知渠道（webhook_url / sendkey 有值即启用，空字符串则不启用）
 notification:
   feishu:
-    enabled: false
     webhook_url: ""
     secret: ""
   wechat:
-    enabled: false
     sendkey: ""

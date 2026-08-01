@@ -21,7 +21,7 @@ def _heat(points: int) -> str:
 
 def format_hackernews(
     stories: list[Story],
-    max_items: int = 20,
+    max_items: int = 25,
 ) -> str:
     stories = stories[:max_items]
 

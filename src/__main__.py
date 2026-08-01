@@ -42,14 +42,12 @@ def _load_config() -> dict:
 def _override_from_env(config: dict) -> None:
     """用环境变量覆盖配置值"""
     env_map = {
-        "FEISHU_ENABLED": ("notification", "feishu", "enabled"),
         "FEISHU_WEBHOOK_URL": ("notification", "feishu", "webhook_url"),
         "FEISHU_SECRET": ("notification", "feishu", "secret"),
-        "WECHAT_ENABLED": ("notification", "wechat", "enabled"),
         "WECHAT_SENDKEY": ("notification", "wechat", "sendkey"),
-        "CRAWLER_SINCE": ("crawler", "since"),
-        "CRAWLER_LANGUAGE": ("crawler", "language"),
-        "CRAWLER_SPOKEN_LANGUAGE": ("crawler", "spoken_language"),
+        "CRAWLER_SINCE": ("crawler", "github", "since"),
+        "CRAWLER_LANGUAGE": ("crawler", "github", "language"),
+        "CRAWLER_SPOKEN_LANGUAGE": ("crawler", "github", "spoken_language"),
         "DISPLAY_MAX_ITEMS": ("display", "max_items"),
     }
 
@@ -57,8 +55,6 @@ def _override_from_env(config: dict) -> None:
         value = os.environ.get(env_var, "").strip()
         if not value:
             continue
-        if env_var.endswith("_ENABLED"):
-            value = value.lower() in ("true", "1", "yes")
         section = config
         for key in path[:-1]:
             if key not in section:
@@ -107,7 +103,7 @@ def main():
     # 2. 抓取 + 格式化（按数据源分发）
     print()
     if args.source == "github":
-        crawler_cfg = config.get("crawler", {})
+        crawler_cfg = config.get("crawler", {}).get("github", {})
         crawler = GitHubTrendingCrawler(
             since=crawler_cfg.get("since", "daily"),
             language=crawler_cfg.get("language", ""),
@@ -136,7 +132,7 @@ def main():
 
         content = format_hackernews(
             stories,
-            max_items=display_cfg.get("max_items", 20),
+            max_items=display_cfg.get("max_items", 25),
         )
 
     elif args.source == "newsnow":
@@ -152,7 +148,7 @@ def main():
 
         content = format_newsnow(
             items,
-            max_items=display_cfg.get("max_items", 20),
+            max_items=display_cfg.get("max_items", 25),
         )
 
     else:
