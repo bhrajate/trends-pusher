@@ -147,10 +147,10 @@ GitHub Secrets → workflow env → 程序读取。
 | Workflow | 数据源 | 默认 cron (UTC) | 北京时间 |
 |----------|--------|----------------|---------|
 | `push-github.yml` | GitHub Trending | `3 2 * * *` | 10:03 |
-| `push-hackernews.yml` | Hacker News | `33 2 * * *` | 10:33 |
 | `push-juejin.yml` | 稀土掘金 | `8 2 * * *` | 10:08 |
 | `push-producthunt.yml` | Product Hunt | `13 2 * * *` | 10:13 |
 | `push-nowcoder.yml` | 牛客 | `18 2 * * *` | 10:18 |
+| `push-hackernews.yml` | Hacker News | `33 2 * * *` | 10:33 |
 
 均支持 `workflow_dispatch` 手动触发，共享同一套 Secrets。
 
